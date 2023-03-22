@@ -6,11 +6,11 @@ from veracode_api_signing.plugin_requests import RequestsAuthPluginVeracodeHMAC
 from veracode_api_py import VeracodeAPI as vapi
 from veracode_api_py.dynamic import DynUtils
 
-def processList(app_name, url_list, scan_id, dry_run):
+def processList(dast_name, url_list, scan_id, dry_run, audit):
 
     if(scan_id is None):
         print("Looking up App ID...")
-        app_id = lookup_analysis_id(app_name)
+        app_id = lookup_analysis_id(dast_name)
         if (app_id is None):
             print ("Sorry, can't find that application in your Veracode account.")
             return None
@@ -28,7 +28,7 @@ def processList(app_name, url_list, scan_id, dry_run):
     scan_config = pull_dast_config(scan_id)
     if (scan_config is None):
         return None
-    if (dry_run):
+    if (dry_run or audit):
         write_json_file(scan_config, scan_id+"_original.json")
     print("Parsing input blocklist file...")
     blocklist = parse_txt_blocklist(url_list)
@@ -41,8 +41,8 @@ def processList(app_name, url_list, scan_id, dry_run):
     
     print("Patching local scan configuration...")
     updated_scan = patch_local_scan_config(scan_config, blocklist)
-    if (dry_run):
-        write_json_file(updated_scan, scan_id+"_patched.json")
+    if (dry_run or audit):
+        write_json_file(updated_scan, scan_id+"_patch.json")
     
     if not dry_run:
         print("Pushing scan configuration changes to API...")
@@ -53,17 +53,21 @@ def processList(app_name, url_list, scan_id, dry_run):
             print("Error trying to pull the DAST scan")
             print(e)
     
+    if audit:
+        print("Pulling DAST Scan config...")
+        scan_config_final = pull_dast_config(scan_id)
+        write_json_file(scan_config_final, scan_id+"_updated.json")
     
     print("Done!")
 
 
 
-def lookup_analysis_id(app_name):
+def lookup_analysis_id(dast_name):
 
-    data = vapi().get_analyses_by_name(app_name)
+    data = vapi().get_analyses_by_name(dast_name)
 
     for app in data:
-        if (app.get("name") == app_name):
+        if (app.get("name") == dast_name):
            analysis_id = app.get("analysis_id")
            print("Analysis ID is: " + analysis_id)
            return analysis_id
@@ -163,21 +167,24 @@ def write_json_file(json_data, filename):
 def main():
 
     parser = argparse.ArgumentParser(description="This script takes DAST Scan name as input and adds a list of urls to the blocklist.")
-    parser.add_argument("-a", "--app_name", required=True, help="DAST scan name within the Veracode platform.")
+    parser.add_argument("-n", "--name", required=True, help="DAST scan name within the Veracode platform.")
     parser.add_argument("-u", "--url_list", required=True, help="Path to text list of urls to add to blocklist.")
     parser.add_argument("-s", "--scan_id", required=False, help="Unique Scan_ID")
-    parser.add_argument("-d", "--dry_run", help="Will not make call to Veracode API to update DAST Scan, instead will generate original json of scan and updated json as files.", action="store_true")
+    parser.add_argument("-d", "--dry_run", help="Will not make call to Veracode API to update DAST Scan, instead will generate original json of scan and patch json as files.", action="store_true")
+    parser.add_argument("-a", "--audit", help="Generate audit files of original json of scan, updated patch json and final scan config after patch as files.", action="store_true")
+    
 
     args = parser.parse_args()
 
-    app_name = args.app_name.strip()
+    dast_name = args.name.strip()
     url_list = args.url_list.strip()
     dry_run = args.dry_run
+    audit = args.audit
     
     scan_id = None
     if(args.scan_id != None):
         scan_id = args.scan_id.strip()
-    result = processList(app_name, url_list, scan_id, dry_run)
+    result = processList(dast_name, url_list, scan_id, dry_run, audit)
 
 
 if __name__ == '__main__':

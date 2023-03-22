@@ -29,12 +29,13 @@ Updates an existing DAST scan blocklist from a provided text file.
 `DAST_addToBlocklist.py [-h] <arguments>`
 
 Arguments:
-* `-a` or `--app_name` `<APPLICATION>` - name of the DAST configuration within Veracode (required).
+* `-n` or `--name` `<APPLICATION>` - name of the DAST configuration within Veracode (required).
 * `-u` or `--url_list` `<Path to Text file>` - Path to the text file containgin the list of urls to add to blocklist (required).
 * `-s` or `--scan_id` `<GUID>` - scan_id can be provided to reduce number of calls to api or if app_name returns multiple scan_id's (optional)
-
+* `-d` or `--dry_run` - Will cause script to not make call to Veracode API to update DAST Scan, instead will generate original json of scan and patch json as files. (optional)
+* `-a` or `--audit` `<GUID>` - Generate audit files of original json of scan, updated patch json and final scan config after patch applied as files (optional)
 
 **Example**
 ```
-> python DAST_addToBlocklist.py --app_name "Verademo" --url_list "blocklist.txt"
+> python DAST_addToBlocklist.py --name "Verademo" --url_list "blocklist.txt"
 ```
