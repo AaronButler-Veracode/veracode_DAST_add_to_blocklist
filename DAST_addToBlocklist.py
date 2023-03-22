@@ -148,16 +148,15 @@ def patch_local_scan_config(scan_config, blocklist):
         allowed_hosts = []
     authentications = scan_config["auth_configuration"].get("authentications")
     auth_config = DynUtils().setup_auth_config(authentications)
-    crawl_config = scan_config.get("crawl_configuration")
+    crawl_config = DynUtils().setup_crawl_configuration(scan_config["crawl_configuration"].get("scripts"), scan_config["crawl_configuration"].get("disabled"))
+    
     scan_config_request = vapi().dyn_setup_scan_config_request(url, allowed_hosts, auth_config, crawl_config, scan_settings_updated)
     
     # create final payload for scan request
     scan_payload = vapi().dyn_setup_scan(scan_config_request)
     # print(scan_payload)
     return scan_payload
-    
-    
-    
+
     
 def write_json_file(json_data, filename):
     print("Writing to json file: " + filename)
@@ -173,7 +172,6 @@ def main():
     parser.add_argument("-d", "--dry_run", help="Will not make call to Veracode API to update DAST Scan, instead will generate original json of scan and patch json as files.", action="store_true")
     parser.add_argument("-a", "--audit", help="Generate audit files of original json of scan, updated patch json and final scan config after patch as files.", action="store_true")
     
-
     args = parser.parse_args()
 
     dast_name = args.name.strip()
@@ -184,7 +182,7 @@ def main():
     scan_id = None
     if(args.scan_id != None):
         scan_id = args.scan_id.strip()
-    result = processList(dast_name, url_list, scan_id, dry_run, audit)
+    processList(dast_name, url_list, scan_id, dry_run, audit)
 
 
 if __name__ == '__main__':
