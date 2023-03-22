@@ -118,7 +118,12 @@ def process_blocklist_urls(scan_config, blocklist):
         blocklist_updated = []    
     
     for url in blocklist:
-        blocklist_updated.append(vapi().dyn_setup_url(url))
+        # check if url already exists in blocklist, remove http:// and https:// for better matching
+        blocklist_updated_string = str(blocklist_updated).replace("https://","").replace("http://", "")
+        # strip out http:// and https:// and add single quotes for exact url matches
+        url_stripped = "'"+url.replace("https://","").replace("http://", "")+"'"
+        if url_stripped not in blocklist_updated_string:
+            blocklist_updated.append(vapi().dyn_setup_url(url))
     
     return vapi().dyn_setup_blocklist(blocklist_updated)
     
