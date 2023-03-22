@@ -137,10 +137,8 @@ def patch_local_scan_config(scan_config, blocklist):
     crawl_config = scan_config.get("crawl_configuration")
     scan_config_request = vapi().dyn_setup_scan_config_request(url, allowed_hosts, auth_config, crawl_config, scan_settings_updated)
     
-    # TODO: Remove once veracode_api.py is updated to support None value.
-    scan_contact_info = DynUtils().setup_scan_contact_info('','','') 
     # create final payload for scan request
-    scan_payload = vapi().dyn_setup_scan(scan_config_request, scan_contact_info)
+    scan_payload = vapi().dyn_setup_scan(scan_config_request)
     # print(scan_payload)
     return scan_payload
     
