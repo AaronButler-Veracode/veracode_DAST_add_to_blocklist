@@ -28,7 +28,7 @@ def processBlockList(dast_name, url_list, scan_id, dry_run, audit):
         scan_id = scan.get("scan_id")
 
     script_date_time = (datetime.datetime.now()).isoformat("_", "seconds").replace(":", "_")
-    output_file_prefix = scan_id + "_" + script_date_time
+    output_file_prefix = "audits/" + scan_id + "_" + script_date_time
     
     print("Pulling DAST Scan config...")
     scan_config = pull_dast_config(scan_id)
