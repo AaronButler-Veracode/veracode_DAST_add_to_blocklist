@@ -1,13 +1,17 @@
 import argparse
 import json
+import datetime
 
 from veracode_api_signing.plugin_requests import RequestsAuthPluginVeracodeHMAC
 
 from veracode_api_py import VeracodeAPI as vapi
 from veracode_api_py.dynamic import DynUtils
 
-def processList(dast_name, url_list, scan_id, dry_run, audit):
+def processBlockList(dast_name, url_list, scan_id, dry_run, audit):
 
+    script_date_time = (datetime.datetime.now()).isoformat("_", "seconds").replace(":", "_")
+    output_file_prefix = scan_id + "_" + script_date_time
+    
     if(scan_id is None):
         print("Looking up App ID...")
         app_id = lookup_analysis_id(dast_name)
@@ -29,7 +33,7 @@ def processList(dast_name, url_list, scan_id, dry_run, audit):
     if (scan_config is None):
         return None
     if (dry_run or audit):
-        write_json_file(scan_config, scan_id+"_original.json")
+        write_json_file(scan_config, output_file_prefix+"_original.json")
     print("Parsing input blocklist file...")
     blocklist = parse_txt_blocklist(url_list)
     if(blocklist is None or len(blocklist) == 0 ):
@@ -42,7 +46,7 @@ def processList(dast_name, url_list, scan_id, dry_run, audit):
     print("Patching local scan configuration...")
     updated_scan = patch_local_scan_config(scan_config, blocklist)
     if (dry_run or audit):
-        write_json_file(updated_scan, scan_id+"_patch.json")
+        write_json_file(updated_scan, output_file_prefix+"_patch.json")
     
     if not dry_run:
         print("Pushing scan configuration changes to API...")
@@ -56,7 +60,7 @@ def processList(dast_name, url_list, scan_id, dry_run, audit):
     if audit:
         print("Pulling DAST Scan config...")
         scan_config_final = pull_dast_config(scan_id)
-        write_json_file(scan_config_final, scan_id+"_updated.json")
+        write_json_file(scan_config_final, output_file_prefix+"_updated.json")
     
     print("Done!")
 
@@ -81,10 +85,18 @@ def lookup_scan(analysis_id):
     if len(scans) == 1:
         return scans[0]
     if len(scans) > 1:
+        # Set column widths
+        wcol1 = 50
+        wcol2 = 50
+        wcol3 = 100
+        
         print("Multiple scans found, please review the list, choose the correct scan_id and run the script again using the '--scan_id' parameter")
-        print("Scan ID      ---     Scan Name       ---     Target URL")
+        
+        print("==================".ljust(wcol1) + "==================".ljust(wcol2) + "==================".ljust(wcol3))
+        print("Scan ID".ljust(wcol1) + "Scan Name".ljust(wcol2) + "Target URL".ljust(wcol3) )
+        print("==================".ljust(wcol1) + "==================".ljust(wcol2) + "==================".ljust(wcol3))
         for scan in scans:
-            print(scan.get("scan_id") + "      ---     " + scan.get("scan_config_name")  + "      ---     " + scan.get("target_url"))
+            print(scan.get("scan_id").ljust(wcol1) +  scan.get("scan_config_name").ljust(wcol2) +  scan.get("target_url").ljust(wcol3))
         return -1
 
     return None
@@ -162,6 +174,7 @@ def write_json_file(json_data, filename):
     print("Writing to json file: " + filename)
     with open(filename, "w") as outfile:
         json.dump(json_data, outfile)
+    outfile.close()
     
 def main():
 
@@ -182,7 +195,7 @@ def main():
     scan_id = None
     if(args.scan_id != None):
         scan_id = args.scan_id.strip()
-    processList(dast_name, url_list, scan_id, dry_run, audit)
+    processBlockList(dast_name, url_list, scan_id, dry_run, audit)
 
 
 if __name__ == '__main__':
