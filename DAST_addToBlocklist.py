@@ -1,11 +1,12 @@
 import argparse
+import json
 
 from veracode_api_signing.plugin_requests import RequestsAuthPluginVeracodeHMAC
 
 from veracode_api_py import VeracodeAPI as vapi
 from veracode_api_py.dynamic import DynUtils
 
-def processList(app_name, url_list, scan_id):
+def processList(app_name, url_list, scan_id, dry_run):
 
     if(scan_id is None):
         print("Looking up App ID...")
@@ -27,7 +28,8 @@ def processList(app_name, url_list, scan_id):
     scan_config = pull_dast_config(scan_id)
     if (scan_config is None):
         return None
-
+    if (dry_run):
+        write_json_file(scan_config, scan_id+"_original.json")
     print("Parsing input blocklist file...")
     blocklist = parse_txt_blocklist(url_list)
     if(blocklist is None or len(blocklist) == 0 ):
@@ -39,14 +41,17 @@ def processList(app_name, url_list, scan_id):
     
     print("Patching local scan configuration...")
     updated_scan = patch_local_scan_config(scan_config, blocklist)
+    if (dry_run):
+        write_json_file(updated_scan, scan_id+"_patched.json")
     
-    print("Pushing scan configuration changes to API...")
-    try:
-        results = vapi().update_dyn_scan(scan_id, updated_scan)
-        print(results)
-    except Exception as e:
-       print("Error trying to pull the DAST scan")
-       print(e)
+    if not dry_run:
+        print("Pushing scan configuration changes to API...")
+        try:
+            results = vapi().update_dyn_scan(scan_id, updated_scan)
+            print(results)
+        except Exception as e:
+            print("Error trying to pull the DAST scan")
+            print(e)
     
     
     print("Done!")
@@ -142,21 +147,32 @@ def patch_local_scan_config(scan_config, blocklist):
     # print(scan_payload)
     return scan_payload
     
+    
+    
+    
+def write_json_file(json_data, filename):
+    print("Writing to json file: " + filename)
+    with open(filename, "w") as outfile:
+        json.dump(json_data, outfile)
+    
 def main():
 
     parser = argparse.ArgumentParser(description="This script takes DAST Scan name as input and adds a list of urls to the blocklist.")
     parser.add_argument("-a", "--app_name", required=True, help="DAST scan name within the Veracode platform.")
     parser.add_argument("-u", "--url_list", required=True, help="Path to text list of urls to add to blocklist.")
     parser.add_argument("-s", "--scan_id", required=False, help="Unique Scan_ID")
+    parser.add_argument("-d", "--dry_run", help="Will not make call to Veracode API to update DAST Scan, instead will generate original json of scan and updated json as files.", action="store_true")
 
     args = parser.parse_args()
 
     app_name = args.app_name.strip()
     url_list = args.url_list.strip()
+    dry_run = args.dry_run
+    
     scan_id = None
     if(args.scan_id != None):
         scan_id = args.scan_id.strip()
-    result = processList(app_name, url_list, scan_id)
+    result = processList(app_name, url_list, scan_id, dry_run)
 
 
 if __name__ == '__main__':
