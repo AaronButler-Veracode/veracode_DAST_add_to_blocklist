@@ -1,1 +1,2 @@
-veracode-api-py>=0.9.38
+veracode-api-py>=0.9.47
+veracode-api-signing>=22.3.0

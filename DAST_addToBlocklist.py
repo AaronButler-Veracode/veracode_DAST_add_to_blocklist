@@ -28,7 +28,7 @@ def processBlockList(dast_name, url_list, scan_id, dry_run, audit):
         scan_id = scan.get("scan_id")
 
     script_date_time = (datetime.datetime.now()).isoformat("_", "seconds").replace(":", "_")
-    output_file_prefix = "audits/" + scan_id + "_" + script_date_time
+    output_file_prefix = "audits_" + scan_id + "_" + script_date_time
     
     print("Pulling DAST Scan config...")
     scan_config = pull_dast_config(scan_id)
@@ -157,11 +157,13 @@ def patch_local_scan_config(scan_config, blocklist):
     
     # create new scan request
     url = scan_config.get("target_url")
-    allowed_hosts = scan_config.get("allowed_hosts")
-    if(allowed_hosts is None):
-        allowed_hosts = []
-    authentications = scan_config["auth_configuration"].get("authentications")
-    auth_config = DynUtils().setup_auth_config(authentications)
+    allowed_hosts = scan_config.get("allowed_hosts", [])
+    auth_config = None
+    authentications = None
+    authentications_config = scan_config.get("auth_configuration", None)
+    if(authentications_config is not None):
+        authentications = authentications_config.get("authentications", None)
+        auth_config = DynUtils().setup_auth_config(authentications)
     crawl_config = DynUtils().setup_crawl_configuration(scan_config["crawl_configuration"].get("scripts"), scan_config["crawl_configuration"].get("disabled"))
     
     scan_config_request = vapi().dyn_setup_scan_config_request(url, allowed_hosts, auth_config, crawl_config, scan_settings_updated)
